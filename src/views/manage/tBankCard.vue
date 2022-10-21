@@ -1,0 +1,313 @@
+<template>
+    <div>
+
+        <p class="agency-top-text">银行卡管理</p>
+        <div class="agency-box">
+            <Modal
+                    v-model="modal1"
+                    title="添加账号"
+                    @on-ok="ok"
+                    @on-cancel="cancel">
+                <Form :label-width="80" v-model='fromData'>
+                    <FormItem label="银行名称">
+                        <Input v-model="fromData.bankName" placeholder="请输入银行"/>
+                    </FormItem>
+                    <FormItem label="卡号">
+                        <Input v-model="fromData.bankCardNo" placeholder="请输入卡号"/>
+                    </FormItem>
+                    <FormItem label="支行">
+                        <Input v-model="fromData.branchName" placeholder="请输入支行"/>
+                    </FormItem>
+                    <FormItem label="开户名">
+                        <Input v-model="fromData.accountName" placeholder="请输入开户名"/>
+                    </FormItem>
+                    <FormItem label="状态">
+                        <Select v-model="fromData.status">
+                            <Option v-for="item in statusList" :key='item.id' :value="item.title">{{item.name}}</Option>
+                        </Select>
+                    </FormItem>
+                </Form>
+            </Modal>
+            <Modal
+                    v-model="modal2"
+                    title="修改账号"
+                    @on-ok="ok2"
+                    @on-cancel="cancel2">
+                <Form :label-width="80" v-model='fromlk'>
+                    <FormItem label="银行名称">
+                        <Input v-model="fromlk.bankName" placeholder="请输入银行"/>
+                    </FormItem>
+                    <FormItem label="卡号">
+                        <Input v-model="fromlk.bankCardNo" placeholder="请输入卡号"/>
+                    </FormItem>
+                    <FormItem label="支行">
+                        <Input v-model="fromlk.branchName" placeholder="请输入支行"/>
+                    </FormItem>
+                    <FormItem label="开户名">
+                        <Input v-model="fromlk.accountName" placeholder="请输入开户名"/>
+                    </FormItem>
+                    <FormItem label="状态">
+                        <Select v-model="fromlk.status">
+                            <Option v-for="item in statusList" :key='item.id' :value="item.title">{{item.name}}</Option>
+                        </Select>
+                    </FormItem>
+                </Form>
+            </Modal>
+            <Button type="primary" @click="modal1 = true">添加账号</Button>
+            <Table highlight-row ref="currentRowTable" :columns="columns3" :data="dataList"
+                   style="margin-top:20px;"></Table>
+            <Row type="flex" justify="end" style="margin-top:10px;">
+                <Page :total="totals" :page-size="table_limit" show-total :current='table_current'/>
+            </Row>
+        </div>
+    </div>
+</template>
+<script>
+    import {
+        getTBankCard,
+        updateTBankCard,
+        deleteTBankCard,
+        getAllChannel,
+        insertTBankCard
+    } from "@/api/index";
+
+    export default {
+        data() {
+            return {
+                totals: 0,
+                table_limit: 10,
+                table_current: 1,
+                id: '',
+                modal1: false,
+                modal2: false,
+                fromData: {
+                    bankName: '',
+                    branchName: '',
+                    bankCardNo: '',
+                    status: '',
+                    accountName: "",
+                },
+                fromlk: {
+                    id: '',
+                    bankName: '',
+                    branchName: '',
+                    bankCardNo: '',
+                    status: '',
+                    accountName: "",
+                },
+                statusList: [
+                    {
+                        title: 1,
+                        name: '启用'
+                    },
+                    {
+                        title: 0,
+                        name: '禁用'
+                    },
+                ],payTypeList: [
+
+                ],
+                columns3: [
+                    {
+                        type: 'index',
+                        width: 60,
+                        align: 'center'
+                    },
+                    {
+                        title: 'id',
+                        key: 'id'
+                    },
+                    {
+                        title: '银行卡号',
+                        key: 'bankCardNo'
+                    },
+                    {
+                        title: '银行名称',
+                        key: 'bankName'
+                    },
+                    {
+                        title: '开户名',
+                        key: 'accountName'
+                    },
+                    {
+                        title: '支行名称',
+                        key: 'branchName'
+                    },
+                    {
+                        title: '状态',
+                        key: 'status',
+                        render: (h, params) => {
+                            return h('div', [
+                                h('strong', {
+                                    style: {
+                                        marginRight: '5px'
+                                    },
+                                }),
+                                h('i-switch', {
+                                        props: {
+                                            type: 'primary',
+                                            size: "large",
+                                            value: params.row.status == '1'
+                                        },
+                                        style: {
+                                            marginRight: '5px'
+                                        },
+                                        on: {
+                                            'on-change': (value) => {
+                                                console.log(value)
+                                                var channel = {
+                                                    id:params.row.id,
+                                                    status:value?1:0
+                                                }
+                                                updateTBankCard(channel).then(res => {
+                                                    this.$Message.info(res.data);
+                                                }).catch(err => {
+                                                    this.treeLoading = false;
+                                                });
+                                            }
+                                        }
+                                    },
+                                    [
+                                        h('span', {
+                                            slot: "open",
+                                            domProps: {
+                                                innerHTML: '开启'
+                                            }
+                                        }),
+                                        h('span', {
+                                            slot: "close",
+                                            domProps: {
+                                                innerHTML: '禁用'
+                                            }
+                                        }),
+                                    ])
+                            ])
+                        }
+                    },
+                    {
+                        title: '操作',
+                        render: (h, params) => {
+                            return h('div', [
+                                h('Button', {
+                                    props: {
+                                        size: 'small',
+                                        type: 'error'
+                                    },
+                                    style: {
+                                        marginRight: '10px'
+                                    },
+                                    on: {
+                                        click: () => {
+                                            this.id = params.row.id
+                                            this.delete()
+                                        }
+                                    }
+                                }, '删除'),
+                                h('Button', {
+                                    props: {
+                                        size: 'small',
+                                        type: 'info'
+                                    },
+                                    style: {
+                                        marginRight: '10px'
+                                    },
+                                    on: {
+                                        click: () => {
+                                            this.modal2 = true
+                                            this.fromlk = params.row
+                                        }
+                                    }
+                                }, '编辑'),
+
+                            ])
+                        }
+                    },
+                ],
+                dataList: []
+            }
+        },
+        mounted() {
+            this.contains()
+        },
+        methods: {
+            contains(page) {
+                let params = {
+                    // id:localStorage.getItem('uid'),
+                    // parentId:localStorage.getItem('parentId')
+                }
+                getAllChannel().then(res => {
+                    console.log(res)
+                    this.payTypeList = res.data
+
+                }).catch(err => {
+                    this.treeLoading = false;
+                });
+                getTBankCard(params).then(res => {
+                    console.log(res)
+                    this.dataList = res.data.list
+
+                }).catch(err => {
+                    this.treeLoading = false;
+                });
+            },
+            ok() {
+                let params = this.fromData
+                insertTBankCard(params).then(res => {
+                    console.log(res)
+                    this.contains()
+
+                }).catch(err => {
+                    this.treeLoading = false;
+                });
+            },
+            cancel() {
+            },
+            ok2() {
+                let params = this.fromlk
+                updateTBankCard(params).then(res => {
+                    console.log(res)
+                    this.contains()
+                }).catch(err => {
+                    this.treeLoading = false;
+                });
+            },
+            cancel2() {
+            },
+            delete() {
+                let params = {
+                    id: this.id
+                }
+                deleteTBankCard(params).then(res => {
+                    this.$Message.info(res.data);
+                    this.contains()
+
+                }).catch(err => {
+                    this.treeLoading = false;
+                });
+            }
+
+
+        }
+    }
+</script>
+
+<style lang="less" scoped>
+    .agency-top-text {
+        font-size: 24px;
+        font-weight: 700;
+        color: #333;
+        margin-top: 30px 0 20px 30px;
+    }
+
+    .agency-box {
+        width: 100%;
+        height: 100%;
+        padding: 15px;
+        margin-top: 40px 0 20px 30px;
+        background: #fff;
+    }
+
+    .fl {
+        margin-right: 10px;
+    }
+</style>
